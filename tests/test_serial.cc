@@ -37,7 +37,7 @@ static void catch_alarm(int sig)
     } }
 
 
-	class PFC_Serial : public testing::Test
+	class SerialTest : public testing::Test
 	{
 		pid_t _pid;
 		std::string TestSerialPath;
@@ -46,7 +46,7 @@ protected:
         std::string SerialPath;
 		std::fstream SerialStream;
 
-		PFC_Serial(): _pid(-1), TestSerialPath("/tmp/TestSerial_monip"), SerialPath("/tmp/Serial_monip") {}
+		SerialTest(): _pid(-1), TestSerialPath("/tmp/TestSerial_monip"), SerialPath("/tmp/Serial_monip") {}
 
 		void SetUp()
 		{
@@ -79,7 +79,7 @@ protected:
 	};
 
 
-	TEST_F(PFC_Serial, test_Serial_NewFree_no_path)
+	TEST_F(SerialTest, test_Serial_NewFree_no_path)
 	{
 		Serial * serial = Serial_New("");
 
@@ -88,7 +88,7 @@ protected:
 		Serial_Free(serial);
 	}
 
-	TEST_F(PFC_Serial, test_Serial_NewFree)
+	TEST_F(SerialTest, test_Serial_NewFree)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
@@ -98,7 +98,7 @@ protected:
 	}
 
 
-	TEST_F(PFC_Serial, test_Serial_Write)
+	TEST_F(SerialTest, test_Serial_Write)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
@@ -116,7 +116,7 @@ protected:
 		Serial_Free(serial);
 	}
 
-	TEST_F(PFC_Serial, test_Serial_Read)
+	TEST_F(SerialTest, test_Serial_Read)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
@@ -135,7 +135,7 @@ protected:
 		Serial_Free(serial);
 	}
 
-	TEST_F(PFC_Serial, test_Serial_Read_Timeout)
+	TEST_F(SerialTest, test_Serial_Read_Timeout)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
@@ -154,7 +154,7 @@ protected:
 		Serial_Free(serial);
 	}
 
-	TEST_F(PFC_Serial, test_ReadMessage_Simple)
+	TEST_F(SerialTest, test_ReadMessage_Simple)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
@@ -169,7 +169,7 @@ protected:
 		ASSERT_EQ(ReadMessage(serial, AUTOREPORT_HEADER, testReadData), 28);
 	}
 
-	TEST_F(PFC_Serial, test_ReadMessage_Checksum_Fail)
+	TEST_F(SerialTest, test_ReadMessage_Checksum_Fail)
 	{
 		Serial * serial = Serial_New(SerialPath.c_str());
 
