@@ -1,5 +1,6 @@
 set(libmonip_SOURCES 
     serial.c
+    78m6610.c
 )
 
 add_library(libmonip SHARED ${libmonip_SOURCES})

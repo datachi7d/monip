@@ -13,6 +13,8 @@
 
 #include "serial.h"
 
+#include "78m6610.h"
+
 namespace PFC
 {
 
@@ -44,7 +46,7 @@ protected:
         std::string SerialPath;
 		std::fstream SerialStream;
 
-		PFC_Serial(): _pid(-1), TestSerialPath("/tmp/PFCTestSerial"), SerialPath("/tmp/PFCSerial") {}
+		PFC_Serial(): _pid(-1), TestSerialPath("/tmp/TestSerial_monip"), SerialPath("/tmp/Serial_monip") {}
 
 		void SetUp()
 		{
@@ -54,11 +56,10 @@ protected:
 			char pty2[256] = {0};
 			sprintf(pty2, "pty,raw,echo=0,link=%s", SerialPath.c_str());
 
-			std::vector<const char *> commandVector { "/usr/bin/socat", "-d -d -d -d", pty1, pty2 };
+			std::vector<const char *> commandVector { "/usr/bin/socat", "-d", "-d", "-d", "-d", "-D", "-lu", pty1, pty2 };
 			_pid = SpawnProcess(commandVector, false, false);
 
 			int counter = 0;
-
 
 			while ((!SerialStream.is_open()) && counter < 10)
 			{
@@ -66,6 +67,8 @@ protected:
 				usleep(5000);
 				counter++;
 			}
+
+			usleep(5000);
 
 			ASSERT_TRUE(SerialStream);
 		}
@@ -101,7 +104,7 @@ protected:
 
 		EXPECT_TRUE(serial != NULL);
 
-		uint8_t writeData[] = {0x01, 0x02, 0x03, 0x13, 0x11, 0xe0};
+		uint8_t writeData[] = {0x08, 0x02, 0x04, 0x13, 0x11, 0xe0};
 		char testReadData[sizeof(writeData)] = {0};
 
 		ASSERT_EQ(Serial_Write(serial, writeData, sizeof(writeData)), sizeof(writeData));
@@ -119,7 +122,7 @@ protected:
 
 		EXPECT_TRUE(serial != NULL);
 
-		char writeData[] = {0x01, 0x02, 0x03, 0x13, 0x11, -100};
+		char writeData[] = {0x01, 0x02, 0x03, 0x13, 0x11, 0xff};
 		uint8_t testReadData[sizeof(writeData)] = {0};
 
 		SerialStream.write(writeData, sizeof(writeData));
@@ -138,10 +141,10 @@ protected:
 
 		EXPECT_TRUE(serial != NULL);
 
-		char writeData[] = {0x01, 0x02, 0x03, 0x13, 0x11, -100};
+		char writeData[] = {0x05, 0x08, 0x02, 0x13, 0x11, 0xff};
 		uint8_t testReadData[sizeof(writeData)] = {0};
 
-		SerialStream.write(writeData, sizeof(writeData) - 1);
+		SerialStream.write(writeData, sizeof(writeData) - 2);
 		SerialStream.flush();
 
 		ASSERT_EQ(Serial_Read(serial, testReadData, sizeof(testReadData)), 0);
@@ -151,50 +154,60 @@ protected:
 		Serial_Free(serial);
 	}
 
-	TEST_F(PFC_Serial, test_Serial_ReadMessage)
+	class Message : public testing::Test
 	{
-		Serial * serial = Serial_New(SerialPath.c_str());
+	
+	};
 
-		EXPECT_TRUE(serial != NULL);
-
-		char writeData[] = {0xf6, 0x03, 0x00, 0x06};
-		uint8_t testReadData[255] = {0};
-
-		SerialStream.write(writeData, sizeof(writeData));
-		SerialStream.flush();
-
-		PFC_ID ID = 0;
-		pfc_size size = 0;
-
-		ASSERT_EQ(Serial_ReadPFCMessage(serial, &ID, testReadData, &size), PFC_ERROR_NONE);
-
-		ASSERT_EQ(size, 1);
-		ASSERT_EQ(ID, 0xf6);
-		ASSERT_EQ(testReadData[0], 0);
-
-		Serial_Free(serial);
-	}
-
-	TEST_F(PFC_Serial, test_Serial_WriteMessage)
+	TEST_F(Message, test_Message)
 	{
-		Serial * serial = Serial_New(SerialPath.c_str());
-
-		EXPECT_TRUE(serial != NULL);
-
-		char expectedData[] = {0xf6, 0x03, 0x00, 0x06};
-		char testReadData[255] = {0};
-
-		PFC_ID ID = 0xf6;
-		pfc_size size = 1;
-		uint8_t writeData = 0;
-
-		ASSERT_EQ(Serial_WritePFCMessage(serial, ID, &writeData, size), PFC_ERROR_NONE);
-
-		ASSERT_USECS(SerialStream.read(testReadData, sizeof(expectedData)), 100000);
-
-		ASSERT_TRUE(memcmp(expectedData, testReadData, sizeof(expectedData)) == 0);
-
-		Serial_Free(serial);
+		uint8_t buffer[256] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x01, 0x01, 0x00, 0x00 };
+		printf("%s\n", ConvertAutoReportToJSON((AutoReportMessage *)&buffer[0]));
 	}
+	// TEST_F(PFC_Serial, test_Serial_ReadMessage)
+	// {
+	// 	Serial * serial = Serial_New(SerialPath.c_str());
+
+	// 	EXPECT_TRUE(serial != NULL);
+
+	// 	char writeData[] = {0xf6, 0x03, 0x00, 0x06};
+	// 	uint8_t testReadData[255] = {0};
+
+	// 	SerialStream.write(writeData, sizeof(writeData));
+	// 	SerialStream.flush();
+
+	// 	PFC_ID ID = 0;
+	// 	pfc_size size = 0;
+
+	// 	ASSERT_EQ(Serial_ReadPFCMessage(serial, &ID, testReadData, &size), PFC_ERROR_NONE);
+
+	// 	ASSERT_EQ(size, 1);
+	// 	ASSERT_EQ(ID, 0xf6);
+	// 	ASSERT_EQ(testReadData[0], 0);
+
+	// 	Serial_Free(serial);
+	// }
+
+	// TEST_F(PFC_Serial, test_Serial_WriteMessage)
+	// {
+	// 	Serial * serial = Serial_New(SerialPath.c_str());
+
+	// 	EXPECT_TRUE(serial != NULL);
+
+	// 	char expectedData[] = {0xf6, 0x03, 0x00, 0x06};
+	// 	char testReadData[255] = {0};
+
+	// 	PFC_ID ID = 0xf6;
+	// 	pfc_size size = 1;
+	// 	uint8_t writeData = 0;
+
+	// 	ASSERT_EQ(Serial_WritePFCMessage(serial, ID, &writeData, size), PFC_ERROR_NONE);
+
+	// 	ASSERT_USECS(SerialStream.read(testReadData, sizeof(expectedData)), 100000);
+
+	// 	ASSERT_TRUE(memcmp(expectedData, testReadData, sizeof(expectedData)) == 0);
+
+	// 	Serial_Free(serial);
+	// }
 
 }

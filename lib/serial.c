@@ -106,7 +106,7 @@ Serial * Serial_New(const char * path)
 
 	if(path != NULL)
 	{
-		serial = PFC_malloc(sizeof(*serial));
+		serial = malloc(sizeof(*serial));
 
 		if(serial != NULL)
 		{
@@ -121,7 +121,7 @@ Serial * Serial_New(const char * path)
 			else
 			{
 				printf("Error opening %s: %s\n", path, strerror(errno));
-				Serial_Free(serial);
+				free(serial);
 				serial = NULL;
 			}
 		}
@@ -173,6 +173,7 @@ uint8_t Serial_Write(Serial * serial, uint8_t * buffer, uint8_t size)
     {
     	ret = write(serial->serialfd, buffer, size);
     	fsync(serial->serialfd);
+		tcdrain(serial->serialfd);
     }
 
     return ((ret < 0) | (ret != size)) ? 0 : size;
@@ -200,7 +201,7 @@ void Serial_Free(Serial * serial)
 			close(serial->serialfd);
 		}
 
-		PFC_free(serial);
+		free(serial);
 	}
 }
 
