@@ -26,7 +26,7 @@ size_t msprintf(char ** string, const char * format, ...)
 
         if (len > 0)
         {
-            *string = calloc(len + 1, 0);
+            *string = (char *)calloc(len + 1, 0);
             if (*string != NULL)
             {
                 va_list args;

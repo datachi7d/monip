@@ -56,8 +56,8 @@ protected:
 			char pty2[256] = {0};
 			sprintf(pty2, "pty,raw,echo=0,link=%s", SerialPath.c_str());
 
-			//"-d", "-d", "-d", "-d",
-			std::vector<const char *> commandVector { "/usr/bin/socat",  "-D", "-lu", pty1, pty2 };
+			//"-d", "-d", "-d", "-d", "-D", "-lu",
+			std::vector<const char *> commandVector { "/usr/bin/socat", "-D", pty1, pty2 };
 			_pid = SpawnProcess(commandVector, false, false);
 
 			int counter = 0;
@@ -162,14 +162,17 @@ protected:
 		EXPECT_TRUE(serial != NULL);
 
 		unsigned char writeData[] = {0xae, 0x1e, 0xdc, 0x4c, 0x00 , 0xc1, 0xac, 0xff , 0xdd, 0xa8, 0x03 , 0x51, 0x11, 0x00 , 0xe9, 0xff, 0xff , 0xec, 0xff, 0xff , 0xf2, 0xff, 0xff , 0x85, 0xc1, 0x00 , 0x00, 0x00, 0x00, 0xaf};
-		uint8_t testReadData[sizeof(writeData)] = {0};
+		uint8_t testReadData[255] = {0};
 
 		SerialStream.write((char *)writeData, sizeof(writeData));
 		SerialStream.flush();
 
 		ASSERT_EQ(ReadMessage(serial, AUTOREPORT_HEADER, testReadData), 28);
 
-		printf("%s\n", ConvertAutoReportToJSON((AutoReportMessage *)&testReadData[0]));
+		char * output = ConvertAutoReportToJSON((AutoReportMessage *)&testReadData[0]);
+
+		ASSERT_TRUE(output != NULL);
+		//printf("%s\n", ConvertAutoReportToJSON((AutoReportMessage *)&testReadData[0]));
 	}
 
 	TEST_F(SerialTest, test_ReadMessage_Checksum_Fail)
