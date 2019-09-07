@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "serial.h"
 #include "78m6610.h"
@@ -73,15 +74,19 @@ freq = [float(x)/1000 for x in data['freq']]
 kwh = [float(x)/1000 for x in data['kwh']]
 */
 
+
+#define CONVERT_INT24(value) (int32_t)(value & 0x800000 ? value | 0xff000000 : value)
+
+
 void ConvertAutoReport(const AutoReportMessage * message, AutoReportValues * values)
 {
-    values->Vrms  = (message->Vrms)   / 1000.0f;
-    values->Irms  = (message->Irms)   / 128700.1287f;
-    values->Watts = (message->Watts)  / 200.0f;
-    values->Pavg  = (message->Pavg)   / 200.0f;
-    values->PF    = (message->PF)     / 1000.0f;
-    values->Freq  = (message->Freq)   / 1000.0f;
-    values->KwH   = (message->KwH)    / 1000.0f;   
+    values->Vrms  = CONVERT_INT24(message->Vrms)   / 1000.0f;
+    values->Irms  = CONVERT_INT24(message->Irms)   / 128700.1287f;
+    values->Watts = CONVERT_INT24(message->Watts)  / 200.0f;
+    values->Pavg  = CONVERT_INT24(message->Pavg)   / 200.0f;
+    values->PF    = CONVERT_INT24(message->PF)     / 1000.0f;
+    values->Freq  = CONVERT_INT24(message->Freq)   / 1000.0f;
+    values->KwH   = CONVERT_INT24(message->KwH)    / 1000.0f;   
 }
 
 char * ConvertAutoReportToJSON(const AutoReportMessage * message)
@@ -116,34 +121,59 @@ char * ConvertAutoReportToJSON(const AutoReportMessage * message)
 }
 
 
-#define AUTOREPORT_HEADER       0xAE
+
 
 
 int ReadMessage(Serial * serial, uint8_t expectedHeader, uint8_t * buffer)
 {
     uint8_t PacketHeader = 0;
     uint8_t PacketLength = 0;
-    int Result = -1;
+    int Result = -ENODEV ; 
 
     if( Serial_Read(serial, &PacketHeader, 1) == 1 )
     {
         if(Serial_Read(serial, &PacketLength, 1) == 1)
         {
-            Result = Serial_Read(serial, buffer, PacketLength);
+            Result = Serial_Read(serial, buffer, PacketLength-2);
+
+            if(Result > 0)
+            {
+                uint8_t sum = 0;
+                uint8_t pos = 0;
+
+                sum += PacketHeader;
+                sum += PacketLength;
+
+                for(pos = 0; pos < Result; pos++)
+                {
+                    sum += buffer[pos];
+                }
+
+                sum = ((~sum)+1);
+
+                if(sum != 0)
+                {
+                    Result = -EIO;
+                }
+
+                if(PacketHeader != expectedHeader && Result > 0)
+                {
+                    Result = -EFAULT;
+                }
+            }
+            else
+            {
+                Result = -EAGAIN;
+            }
         }
         else
         {
-            Result = 0;
-        }
-
-        if(PacketHeader != expectedHeader && Result > 0)
-        {
-            Result = 0;
+            Result = -EAGAIN;
         }
     }
     else
     {
-        Result = 0;
+        Result = -EAGAIN;
     }
 
     return Result;

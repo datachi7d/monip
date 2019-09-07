@@ -20,6 +20,9 @@ typedef struct _AutoReportMessage AutoReportMessage;
 
 void ConvertAutoReport(const AutoReportMessage * message, AutoReportValues * values);
 char * ConvertAutoReportToJSON(const AutoReportMessage * message);
+int ReadMessage(Serial * serial, uint8_t expectedHeader, uint8_t * buffer);
+
+#define AUTOREPORT_HEADER       0xAE
 
 #ifdef __cplusplus
 }
